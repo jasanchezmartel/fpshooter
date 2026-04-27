@@ -1,5 +1,5 @@
 import { Euler, Vector3 } from "three";
-import { InputManager } from "./InputManager";
+import { InputManager } from "../controller/InputManager";
 
 export class Player {
     private readonly position: Vector3;
@@ -7,7 +7,9 @@ export class Player {
     private readonly moveSpeed: number = 5.0;
     private readonly height: number = 1.6;
     private canShoot: boolean = true;
-    private shootCooldown: number = 0.2;
+    private canShootSecondary: boolean = true;
+    private readonly shootCooldown: number = 0.2;
+    private readonly secondaryShootCooldown: number = 0.05; // High frequency
 
     constructor(input: InputManager) {
         this.input = input;
@@ -29,7 +31,11 @@ export class Player {
             const eulerYaw = new Euler(0, currentYaw, 0, 'YXZ');
             moveVector.applyEuler(eulerYaw);
             
-            this.position.addScaledVector(moveVector, this.moveSpeed * delta);
+            // Lógica de Sprint: multiplicamos la velocidad si se pulsa Shift
+            const isSprinting = this.input.isKeyPressed('ShiftLeft') || this.input.isKeyPressed('ShiftRight');
+            const currentSpeed = isSprinting ? this.moveSpeed * 1.8 : this.moveSpeed;
+
+            this.position.addScaledVector(moveVector, currentSpeed * delta);
         }
 
         this.position.y = this.height;
@@ -39,6 +45,15 @@ export class Player {
         if (this.input.isMousePressed(0) && this.canShoot) {
             this.canShoot = false;
             setTimeout(() => { this.canShoot = true; }, this.shootCooldown * 1000);
+            return true;
+        }
+        return false;
+    }
+
+    public tryShootSecondary(): boolean {
+        if (this.input.isMousePressed(2) && this.canShootSecondary) {
+            this.canShootSecondary = false;
+            setTimeout(() => { this.canShootSecondary = true; }, this.secondaryShootCooldown * 1000);
             return true;
         }
         return false;

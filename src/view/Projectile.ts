@@ -8,9 +8,11 @@ export class Projectile {
     private readonly initialSpeed: number = 20.0
     private readonly maxDistance: number = 200
     private lifeTime: number = 0
+    private readonly useGravity: boolean
 
-    constructor(scene: Scene, position: Vector3, direction: Vector3) {
+    constructor(scene: Scene, position: Vector3, direction: Vector3, useGravity: boolean = true) {
         this.scene = scene
+        this.useGravity = useGravity
 
         const geometry = new SphereGeometry(0.1, 8, 8)
         const material = new MeshStandardMaterial({ color: 0xffaa00 })
@@ -25,7 +27,9 @@ export class Projectile {
     public update(delta: number): boolean {
         this.lifeTime += delta
 
-        this.velocity.y -= this.gravity * delta
+        if (this.useGravity) {
+            this.velocity.y -= this.gravity * delta
+        }
 
         this.mesh.position.addScaledVector(this.velocity, delta)
 
@@ -46,7 +50,7 @@ export class Projectile {
         return this.mesh.position;
     }
 
-    private destroy(): void {
+    public destroy(): void {
         this.scene.remove(this.mesh)
         this.mesh.geometry.dispose()
         if (Array.isArray(this.mesh.material)) {

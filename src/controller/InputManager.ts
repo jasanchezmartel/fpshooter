@@ -4,10 +4,12 @@ export class InputManager {
 
     public init(): void {
         window.addEventListener('keydown', (e) => {
+            if (e.code === 'Tab') e.preventDefault();
             this.keys[e.code] = true;
         });
 
         window.addEventListener('keyup', (e) => {
+            if (e.code === 'Tab') e.preventDefault();
             this.keys[e.code] = false;
         });
 

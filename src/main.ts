@@ -1,6 +1,6 @@
 import './style.css'
-import { UIManager } from './ui/UIManager';
-import { GameManager } from './core/GameManager';
+import { UIManager } from './view/UIManager';
+import { GameManager } from './controller/GameManager';
 
 function main(): void {
     const container = document.querySelector<HTMLDivElement>('#app');
@@ -8,7 +8,6 @@ function main(): void {
         throw new Error('Container #app not found');
     }
     const uiManager = new UIManager(container);
-    uiManager.init();
     
     const gameManager = new GameManager(container, uiManager);
     gameManager.init();
