@@ -1,56 +1,49 @@
 import {
   Mesh,
   MeshStandardMaterial,
-  Scene,
-  Vector3,
   PositionalAudio,
   AudioListener,
   AudioLoader,
-  Box3,
   BufferGeometry,
 } from 'three'
 import hitSoundUrl from '../assets/hit.wav'
 import { eventBus } from '../core/EventBus'
+import { Vec3, Box3 } from '../core/Math'
 
 export class Enemy {
-  private mesh: Mesh
-  private scene: Scene
+  public mesh: Mesh
   private isDead: boolean = false
   private respawnTimer: number = 0
   private blinkTimer: number = 0
   private sound: PositionalAudio
   private spawnSound: PositionalAudio
   private boundingBox: Box3 = new Box3()
+  public color: [number, number, number, number] = [1, 0, 0, 1]
+  public scale: Vec3 = new Vec3(1, 2, 1)
+  public isVisible: boolean = true
+  public geometryType: 'cube' | 'sphere' = 'cube'
 
-  constructor(scene: Scene, geometry: BufferGeometry, position: Vector3, listener: AudioListener) {
-    this.scene = scene
-
+  constructor(_unusedScene: any, geometry: BufferGeometry, position: Vec3, listener: AudioListener) {
+    const hue = Math.random()
+    this.color = [hue, 0.5, 0.5, 1.0] 
     const material = new MeshStandardMaterial({ color: 0xff0000 })
     material.color.setHSL(Math.random(), 0.8, 0.5)
     this.mesh = new Mesh(geometry, material)
-    this.mesh.position.copy(position)
-    this.scene.add(this.mesh)
+    this.mesh.position.copy(position as any)
 
-    // Setup sound
     this.sound = new PositionalAudio(listener)
     this.spawnSound = new PositionalAudio(listener)
     const audioLoader = new AudioLoader()
 
-    // Hit sound using local asset
     audioLoader.load(hitSoundUrl, (buffer) => {
       this.sound.setBuffer(buffer)
       this.sound.setRefDistance(5)
-      this.sound.setRolloffFactor(1)
-      this.sound.setDistanceModel('inverse')
       this.sound.setVolume(0.15)
     })
 
-    // Spawn sound
     audioLoader.load('https://threejs.org/examples/sounds/ping_pong.mp3', (buffer) => {
       this.spawnSound.setBuffer(buffer)
       this.spawnSound.setRefDistance(10)
-      this.spawnSound.setRolloffFactor(2.0)
-      this.spawnSound.setDistanceModel('inverse')
       this.spawnSound.setVolume(0.4)
     })
 
@@ -71,16 +64,18 @@ export class Enemy {
 
     if (this.blinkTimer > 0) {
       this.blinkTimer -= delta
-      this.mesh.visible = Math.floor(this.blinkTimer * 25) % 2 === 0
+      this.isVisible = Math.floor(this.blinkTimer * 25) % 2 === 0
 
       if (this.blinkTimer <= 0) {
-        this.mesh.visible = false
+        this.isVisible = false
         this.isDead = true
         this.respawnTimer = 3
       }
     }
     if (!this.isDead) {
-      this.boundingBox.setFromObject(this.mesh)
+      const p = this.mesh.position
+      this.boundingBox.min.set(p.x - 0.5, p.y - 1, p.z - 0.5)
+      this.boundingBox.max.set(p.x + 0.5, p.y + 1, p.z + 0.5)
     }
   }
 
@@ -92,7 +87,7 @@ export class Enemy {
     return this.boundingBox
   }
 
-  public checkCollision(projectilePosition: Vector3): boolean {
+  public checkCollision(projectilePosition: Vec3): boolean {
     if (!this.isCollidable()) return false
     return this.boundingBox.containsPoint(projectilePosition)
   }
@@ -110,7 +105,7 @@ export class Enemy {
 
   private respawn(): void {
     this.isDead = false
-    this.mesh.visible = true
+    this.isVisible = true
 
     const range = 40
     this.mesh.position.set((Math.random() - 0.5) * range * 2, 1, (Math.random() - 0.5) * range * 2)
@@ -130,7 +125,7 @@ export class Enemy {
     eventBus.emit('ENEMY_SPAWNED')
   }
 
-  public getPosition(): Vector3 {
-    return this.mesh.position
+  public getPosition(): Vec3 {
+    return this.mesh.position as any
   }
 }

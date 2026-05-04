@@ -1,25 +1,27 @@
-import { BufferGeometry, Material, Mesh, Scene, Vector3 } from 'three'
+import { Mesh, Scene } from 'three'
+import { Vec3 } from '../core/Math'
 
 export class Projectile {
   private readonly scene: Scene
-  private readonly mesh: Mesh
-  private readonly velocity: Vector3 = new Vector3()
+  public readonly mesh: Mesh
+  private readonly velocity: Vec3 = new Vec3()
   private readonly gravity: number = 9.8
   private readonly initialSpeed: number = 45.0
-  private readonly maxDistance: number = 500
   private lifeTime: number = 0
   private useGravity: boolean = true
   private _isActive: boolean = false
+  public color: [number, number, number, number] = [1, 0.7, 0, 1] // Naranja bala
+  public scale: Vec3 = new Vec3(0.2, 0.2, 0.2)
+  public isVisible: boolean = true
+  public geometryType: 'cube' | 'sphere' = 'sphere'
 
-  constructor(scene: Scene, geometry: BufferGeometry, material: Material) {
-    this.scene = scene
+  constructor(_unusedScene: any, geometry: any, material: any) {
     this.mesh = new Mesh(geometry, material)
     this.mesh.visible = false
-    this.scene.add(this.mesh)
   }
 
-  public spawn(position: Vector3, direction: Vector3, useGravity: boolean): void {
-    this.mesh.position.copy(position)
+  public spawn(position: Vec3, direction: Vec3, useGravity: boolean): void {
+    this.mesh.position.copy(position as any)
     this.velocity.copy(direction).normalize().multiplyScalar(this.initialSpeed)
     this.useGravity = useGravity
     this.lifeTime = 0
@@ -36,14 +38,11 @@ export class Projectile {
       this.velocity.y -= this.gravity * delta
     }
 
-    this.mesh.position.addScaledVector(this.velocity, delta)
+    const pos = this.getPosition()
+    pos.addScaledVector(this.velocity, delta)
+    this.mesh.position.copy(pos as any)
 
-    // Auto-desactivación por suelo o distancia/tiempo
-    if (
-      this.mesh.position.y <= 0 ||
-      this.lifeTime > 3 ||
-      this.mesh.position.length() > this.maxDistance
-    ) {
+    if (this.lifeTime > 2 || pos.lengthSq() > 1000000) {
       this.deactivate()
       return true
     }
@@ -51,8 +50,8 @@ export class Projectile {
     return false
   }
 
-  public getPosition(): Vector3 {
-    return this.mesh.position
+  public getPosition(): Vec3 {
+    return this.mesh.position as any
   }
 
   public deactivate(): void {

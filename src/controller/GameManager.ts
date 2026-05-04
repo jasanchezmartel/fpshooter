@@ -8,13 +8,8 @@ import { eventBus } from '../core/EventBus'
 import { ProjectileManager } from './ProjectileManager'
 import { EnemyManager } from './EnemyManager'
 import { CollisionManager } from './CollisionManager'
-import {
-  Scene,
-  AudioListener,
-  AudioLoader,
-  Vector3,
-  Audio,
-} from 'three'
+import { Vec3 } from '../core/Math'
+import { AudioLoader, Audio, AudioListener } from 'three' // Mantener audio por ahora
 import shootSoundUrl from '../assets/shoot.wav'
 
 export class GameManager {
@@ -29,7 +24,6 @@ export class GameManager {
   private enemyManager!: EnemyManager
   private collisionManager!: CollisionManager
 
-  private scene!: Scene
   private audioListener!: AudioListener
   private container: HTMLElement
   private lastTabState: boolean = false
@@ -51,24 +45,25 @@ export class GameManager {
     this.inputManager.init()
     this.uiManager.init()
 
-    this.scene = this.engine.getScene()
-    this.cameraManager = new CameraManager(this.engine.getCamera(), this.container)
+    this.cameraManager = new CameraManager(this.container)
     this.cameraManager.init()
 
     this.container.addEventListener('contextmenu', (e) => e.preventDefault())
 
-    this.scene.remove(this.engine.getCamera())
-    this.scene.add(this.cameraManager.getHierarchyRoot())
-
+    // Audio (Sigue siendo Three.js temporalmente para no perder sonido)
     this.audioListener = new AudioListener()
-    this.engine.getCamera().add(this.audioListener)
-
+    
     // Inicializar nuevos managers
-    this.projectileManager = new ProjectileManager(this.scene)
-    this.enemyManager = new EnemyManager(this.scene, this.audioListener)
-    this.collisionManager = new CollisionManager(this.scene, this.audioListener)
+    this.projectileManager = new ProjectileManager(null as any)
+    this.enemyManager = new EnemyManager(null as any, this.audioListener)
+    this.collisionManager = new CollisionManager(null as any, this.audioListener)
 
     this.enemyManager.spawnInitialEnemies()
+    
+    // Registrar enemigos existentes en el motor nativo
+    this.enemyManager.getEnemies().forEach(enemy => {
+        this.engine.register(enemy as any)
+    })
 
     // Reaccionar al estado de silencio
     eventBus.on('GAME_STATE_CHANGED', (state) => {
@@ -96,6 +91,10 @@ export class GameManager {
 
     // Actualizar entidades
     this.cameraManager.update(delta)
+    
+    // Sincronizar matriz de vista con el motor
+    this.engine.setViewMatrix(this.cameraManager.getViewMatrix())
+
     const yaw = this.cameraManager.getYaw()
     
     const oldPosition = this.player.getPosition().clone()
@@ -109,8 +108,8 @@ export class GameManager {
     const projectiles = this.projectileManager.getActiveProjectiles()
 
     this.collisionManager.handlePlayerCollisions(this.player, enemies, oldPosition)
-    this.collisionManager.handleProjectileCollisions(projectiles, enemies)
-    this.collisionManager.updateDetectionZone(this.player.getPosition(), projectiles)
+    this.collisionManager.handleProjectileCollisions(projectiles as any, enemies)
+    this.collisionManager.updateDetectionZone(this.player.getPosition(), projectiles as any)
 
     // Sincronizar cámara y notificar posición
     eventBus.emit('UPDATE_PLAYER_POS', this.player.getPosition())
@@ -148,11 +147,29 @@ export class GameManager {
   }
 
   private handleShoot(useGravity: boolean): void {
-    const position = new Vector3()
-    this.cameraManager.getWeaponMesh().getWorldPosition(position)
-    const direction = this.cameraManager.getForwardVector()
+    const position = new Vec3().copy(this.player.getPosition())
+    const forward = this.cameraManager.getForwardVector()
+    
+    // 1. Calcular vector Derecha (Perpendicular al Forward y al Mundo Up)
+    const right = new Vec3(-forward.z, 0, forward.x).normalize()
+    
+    // 2. Calcular vector Arriba local (Perpendicular a Derecha y Forward)
+    const up = new Vec3(
+      -forward.x * forward.y,
+      forward.x * forward.x + forward.z * forward.z,
+      -forward.z * forward.y
+    ).normalize()
 
-    this.projectileManager.spawn(position, direction, useGravity)
+    // Ajuste milimétrico para la nueva arma compacta
+    // 0.15 Derecha, -0.15 Arriba (abajo), 0.3 Adelante (punta del cañón corto)
+    position.addScaledVector(right, 0.15)
+    position.addScaledVector(up, -0.15)
+    position.addScaledVector(forward, 0.3)
+
+    // Al disparar, registramos el proyectil en el motor si no lo estaba
+    this.projectileManager.spawn(position, forward, useGravity)
+    const activeProjectiles = this.projectileManager.getActiveProjectiles()
+    activeProjectiles.forEach(p => this.engine.register(p as any))
 
     if (this.shootSound.buffer) {
       if (this.shootSound.isPlaying) this.shootSound.stop()

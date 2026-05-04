@@ -1,31 +1,25 @@
-import { Box3, Mesh, MeshStandardMaterial, PositionalAudio, Scene, Sphere, Vector3, AudioListener, AudioLoader, BoxGeometry } from 'three'
+import { PositionalAudio, AudioListener, AudioLoader } from 'three'
 import { Player } from '../view/Player'
 import { Enemy } from '../view/Enemy'
 import { Projectile } from '../view/Projectile'
 import { eventBus } from '../core/EventBus'
+import { Vec3, Box3, Sphere } from '../core/Math'
 
 export class CollisionManager {
-  private detectionZone!: Mesh
   private detectionBox: Box3 = new Box3()
   private detectionSound!: PositionalAudio
   private playerInZone: boolean = false
-  private readonly scene: Scene
   private readonly audioListener: AudioListener
 
-  constructor(scene: Scene, audioListener: AudioListener) {
-    this.scene = scene
+  constructor(_unusedScene: any, audioListener: AudioListener) {
     this.audioListener = audioListener
     this.setupDetectionZone()
   }
 
   private setupDetectionZone(): void {
-    const geometry = new BoxGeometry(5, 5, 5)
-    const material = new MeshStandardMaterial({ color: 0x00ff00, wireframe: true })
-    this.detectionZone = new Mesh(geometry, material)
-    this.detectionZone.position.set(10, 2.5, -10)
-    this.scene.add(this.detectionZone)
-
-    this.detectionBox.setFromObject(this.detectionZone)
+    // Definir la zona de detección puramente lógica con Box3
+    this.detectionBox.min.set(7.5, 0, -12.5)
+    this.detectionBox.max.set(12.5, 5, -7.5)
 
     this.detectionSound = new PositionalAudio(this.audioListener)
     const audioLoader = new AudioLoader()
@@ -35,10 +29,9 @@ export class CollisionManager {
       this.detectionSound.setRefDistance(20)
       this.detectionSound.setVolume(0.3)
     })
-    this.detectionZone.add(this.detectionSound)
   }
 
-  public handlePlayerCollisions(player: Player, enemies: Enemy[], oldPosition: Vector3): void {
+  public handlePlayerCollisions(player: Player, enemies: Enemy[], oldPosition: Vec3): void {
     const playerPos = player.getPosition()
     const playerRadius = player.getRadius()
     const playerSphere = new Sphere(playerPos, playerRadius)
@@ -49,10 +42,10 @@ export class CollisionManager {
       const enemyBox = enemy.getBoundingBox()
       
       if (enemyBox.intersectsSphere(playerSphere)) {
-        const closestPoint = new Vector3()
+        const closestPoint = new Vec3()
         enemyBox.clampPoint(playerPos, closestPoint)
         
-        const direction = new Vector3().subVectors(playerPos, closestPoint)
+        const direction = playerPos.sub(closestPoint)
         const distance = direction.length()
         
         if (distance < playerRadius) {
@@ -81,7 +74,7 @@ export class CollisionManager {
     }
   }
 
-  public updateDetectionZone(playerPos: Vector3, projectiles: Projectile[]): void {
+  public updateDetectionZone(playerPos: Vec3, projectiles: Projectile[]): void {
     let triggered = false
     if (this.detectionBox.containsPoint(playerPos)) {
       triggered = true

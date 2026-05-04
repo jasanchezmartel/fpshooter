@@ -1,24 +1,22 @@
-import { Vector3 } from 'three'
+import { Vec3 } from '../core/Math'
 import { InputManager } from '../controller/InputManager'
 
 export class Player {
-  private readonly position: Vector3
+  private readonly position: Vec3
   private readonly input: InputManager
   private readonly moveSpeed: number = 5.0
-  private readonly height: number = 1.6
+  private readonly height: number = 1.7
   private canShoot: boolean = true
   private canShootSecondary: boolean = true
   private readonly shootCooldown: number = 0.2
   private readonly secondaryShootCooldown: number = 0.05
   private readonly radius: number = 0.5
 
-  // Cache de vectores para evitar el recolector de basura (GC)
-  private readonly moveDirection: Vector3 = new Vector3()
-  private readonly UP_AXIS: Vector3 = new Vector3(0, 1, 0)
+  private readonly moveDirection: Vec3 = new Vec3()
 
   constructor(input: InputManager) {
     this.input = input
-    this.position = new Vector3(0, this.height, 0)
+    this.position = new Vec3(0, this.height, 0)
   }
 
   public update(delta: number, currentYaw: number): void {
@@ -32,8 +30,14 @@ export class Player {
     if (this.moveDirection.lengthSq() > 0) {
       this.moveDirection.normalize()
 
-      // Rotar la dirección del movimiento según el giro de la cámara (Yaw)
-      this.moveDirection.applyAxisAngle(this.UP_AXIS, currentYaw)
+      // En nuestro sistema, el Yaw es positivo a la derecha. 
+      // Para rotar el vector de movimiento correctamente:
+      const angle = currentYaw 
+      const nx = this.moveDirection.x * Math.cos(angle) - this.moveDirection.z * Math.sin(angle)
+      const nz = this.moveDirection.x * Math.sin(angle) + this.moveDirection.z * Math.cos(angle)
+      
+      this.moveDirection.x = nx
+      this.moveDirection.z = nz
 
       // Lógica de Sprint
       const isSprinting =
@@ -68,11 +72,11 @@ export class Player {
     return false
   }
 
-  public getPosition(): Vector3 {
+  public getPosition(): Vec3 {
     return this.position
   }
 
-  public setPosition(newPos: Vector3): void {
+  public setPosition(newPos: Vec3): void {
     this.position.copy(newPos)
   }
 

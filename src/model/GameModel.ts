@@ -1,4 +1,4 @@
-import { Vector3 } from 'three'
+import { Vec3 } from '../core/Math'
 import { eventBus } from '../core/EventBus'
 
 export const GameStatus = {
@@ -13,7 +13,7 @@ export interface GameState {
   shotsFired: number
   enemiesKilled: number
   status: GameStatus
-  playerPosition: Vector3
+  playerPosition: Vec3
   isTabMenuOpen: boolean
   isMuted: boolean
 }
@@ -23,7 +23,7 @@ export class GameModel {
     shotsFired: 0,
     enemiesKilled: 0,
     status: GameStatus.PLAYING,
-    playerPosition: new Vector3(0, 0, 0),
+    playerPosition: new Vec3(0, 0, 0),
     isTabMenuOpen: false,
     isMuted: false,
   }
@@ -53,7 +53,7 @@ export class GameModel {
     this.notify()
   }
 
-  private setPlayerPosition(pos: Vector3): void {
+  private setPlayerPosition(pos: Vec3): void {
     this.state.playerPosition.copy(pos)
   }
 

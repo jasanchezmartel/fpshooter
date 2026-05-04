@@ -1,5 +1,6 @@
-import { Scene, SphereGeometry, MeshStandardMaterial, Vector3 } from 'three'
+import { Scene, SphereGeometry, MeshStandardMaterial } from 'three'
 import { Projectile } from '../view/Projectile'
+import { Vec3 } from '../core/Math'
 
 export class ProjectileManager {
   private readonly projectilePool: Projectile[] = []
@@ -16,7 +17,7 @@ export class ProjectileManager {
     const material = new MeshStandardMaterial({
       color: 0xffaa00,
       emissive: 0xffaa00,
-      emissiveIntensity: 0.5,
+      emissiveIntensity: 0.2,
     })
 
     for (let i = 0; i < this.MAX_PROJECTILES; i++) {
@@ -25,7 +26,7 @@ export class ProjectileManager {
     }
   }
 
-  public spawn(position: Vector3, direction: Vector3, useGravity: boolean): void {
+  public spawn(position: Vec3, direction: Vec3, useGravity: boolean): void {
     const projectile = this.projectilePool.find((p) => !p.isActive)
     if (projectile) {
       projectile.spawn(position, direction, useGravity)
