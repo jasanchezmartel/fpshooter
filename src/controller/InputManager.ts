@@ -1,32 +1,32 @@
 export class InputManager {
-    private readonly keys: Record<string, boolean> = {};
-    private readonly mouseButtons: Record<number, boolean> = {};
+  private readonly keys: Record<string, boolean> = {}
+  private readonly mouseButtons: Record<number, boolean> = {}
 
-    public init(): void {
-        window.addEventListener('keydown', (e) => {
-            if (e.code === 'Tab') e.preventDefault();
-            this.keys[e.code] = true;
-        });
+  public init(): void {
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Tab') e.preventDefault()
+      this.keys[e.code] = true
+    })
 
-        window.addEventListener('keyup', (e) => {
-            if (e.code === 'Tab') e.preventDefault();
-            this.keys[e.code] = false;
-        });
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'Tab') e.preventDefault()
+      this.keys[e.code] = false
+    })
 
-        window.addEventListener('mousedown', (e) => {
-            this.mouseButtons[e.button] = true;
-        });
+    window.addEventListener('mousedown', (e) => {
+      this.mouseButtons[e.button] = true
+    })
 
-        window.addEventListener('mouseup', (e) => {
-            this.mouseButtons[e.button] = false;
-        });
-    }
+    window.addEventListener('mouseup', (e) => {
+      this.mouseButtons[e.button] = false
+    })
+  }
 
-    public isKeyPressed(code: string): boolean {
-        return !!this.keys[code];
-    }
+  public isKeyPressed(code: string): boolean {
+    return !!this.keys[code]
+  }
 
-    public isMousePressed(button: number): boolean {
-        return !!this.mouseButtons[button];
-    }
+  public isMousePressed(button: number): boolean {
+    return !!this.mouseButtons[button]
+  }
 }

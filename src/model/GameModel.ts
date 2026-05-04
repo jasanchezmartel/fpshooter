@@ -1,78 +1,79 @@
-import { Vector3 } from 'three';
+import { Vector3 } from 'three'
+import { eventBus } from '../core/EventBus'
 
-export enum GameStatus {
-    PLAYING,
-    PAUSED,
-    GAME_OVER
-}
+export const GameStatus = {
+  PLAYING: 0,
+  PAUSED: 1,
+  GAME_OVER: 2,
+} as const
 
-export type GameStateListener = (state: GameState) => void;
+export type GameStatus = (typeof GameStatus)[keyof typeof GameStatus]
 
-interface GameState {
-    shotsFired: number;
-    enemiesKilled: number;
-    status: GameStatus;
-    playerPosition: Vector3;
-    isTabMenuOpen: boolean;
-    isMuted: boolean;
+export interface GameState {
+  shotsFired: number
+  enemiesKilled: number
+  status: GameStatus
+  playerPosition: Vector3
+  isTabMenuOpen: boolean
+  isMuted: boolean
 }
 
 export class GameModel {
-    private state: GameState = {
-        shotsFired: 0,
-        enemiesKilled: 0,
-        status: GameStatus.PLAYING,
-        playerPosition: new Vector3(0, 0, 0),
-        isTabMenuOpen: false,
-        isMuted: false
-    };
+  private state: GameState = {
+    shotsFired: 0,
+    enemiesKilled: 0,
+    status: GameStatus.PLAYING,
+    playerPosition: new Vector3(0, 0, 0),
+    isTabMenuOpen: false,
+    isMuted: false,
+  }
 
-    private listeners: GameStateListener[] = [];
+  constructor() {
+    eventBus.on('PLAYER_SHOOT', () => this.incrementShots())
+    eventBus.on('ENEMY_KILLED', () => this.incrementKills())
+    eventBus.on('TOGGLE_MUTE', () => this.toggleMute())
+    eventBus.on('TOGGLE_PAUSE', () => {
+      this.state.status =
+        this.state.status === GameStatus.PLAYING ? GameStatus.PAUSED : GameStatus.PLAYING
+      this.notify()
+    })
+    eventBus.on('SET_TAB_MENU', (payload) => this.setTabMenuOpen(payload.open))
+    eventBus.on('UPDATE_PLAYER_POS', (pos) => this.setPlayerPosition(pos))
 
-    public subscribe(listener: GameStateListener): void {
-        this.listeners.push(listener);
-        // Llamada inmediata para sincronizar estado inicial
-        listener(this.state);
+    setTimeout(() => this.notify(), 0)
+  }
+
+  private incrementShots(): void {
+    this.state.shotsFired++
+    this.notify()
+  }
+
+  private incrementKills(): void {
+    this.state.enemiesKilled++
+    this.notify()
+  }
+
+  private setPlayerPosition(pos: Vector3): void {
+    this.state.playerPosition.copy(pos)
+  }
+
+  private setTabMenuOpen(open: boolean): void {
+    if (this.state.isTabMenuOpen !== open) {
+      this.state.isTabMenuOpen = open
+      this.notify()
     }
+  }
 
-    public incrementShots(): void {
-        this.state.shotsFired++;
-        this.notify();
-    }
+  private toggleMute(): void {
+    this.state.isMuted = !this.state.isMuted
+    this.notify()
+  }
 
-    public incrementKills(): void {
-        this.state.enemiesKilled++;
-        this.notify();
-    }
+  public getState(): Readonly<GameState> {
+    return this.state
+  }
 
-    public setPlayerPosition(pos: Vector3): void {
-        this.state.playerPosition.copy(pos);
-        // Normalmente no notificamos a la UI cada frame por posición 
-        // a menos que sea necesario (ej: un minimapa)
-    }
-
-    public setTabMenuOpen(open: boolean): void {
-        if (this.state.isTabMenuOpen !== open) {
-            this.state.isTabMenuOpen = open;
-            this.notify();
-        }
-    }
-
-    public toggleMute(): void {
-        this.state.isMuted = !this.state.isMuted;
-        this.notify();
-    }
-
-    public setStatus(status: GameStatus): void {
-        this.state.status = status;
-        this.notify();
-    }
-
-    public getState(): Readonly<GameState> {
-        return this.state;
-    }
-
-    private notify(): void {
-        this.listeners.forEach(l => l(this.state));
-    }
+  private notify(): void {
+    eventBus.emit('GAME_STATE_CHANGED', this.state)
+  }
 }
